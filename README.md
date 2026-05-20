@@ -1,2 +1,20 @@
-# ai-stock-market-simulator
-Full-stack AI-powered stock market simulator with real-time market data, portfolio analytics, and paper trading using React, Spring Boot, PostgreSQL, and Python.
+# AI Stock Market Simulator
+
+Full-stack stock market simulation platform featuring real-time stock data, paper trading, portfolio management, and financial analytics using React, Spring Boot, PostgreSQL, and Python.
+
+## Tech Stack
+
+- React + TypeScript
+- Spring Boot
+- PostgreSQL
+- Python
+- Finnhub API
+
+## Features
+
+- Real-time stock prices
+- Portfolio management
+- Paper trading
+- Authentication
+- Trading dashboard
+- Financial analytics
