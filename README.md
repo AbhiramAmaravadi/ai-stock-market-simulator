@@ -1,4 +1,4 @@
-# AI Stock Market Simulator
+# AI Stock Market Simulator (COMING SOON)
 
 Full-stack stock market simulation platform featuring real-time stock data, paper trading, portfolio management, and financial analytics using React, Spring Boot, PostgreSQL, and Python.
 
