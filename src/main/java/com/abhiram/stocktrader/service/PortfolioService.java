@@ -2,6 +2,7 @@ package com.abhiram.stocktrader.service;
 
 import com.abhiram.stocktrader.dto.BuyStockRequest;
 import com.abhiram.stocktrader.dto.DashboardResponse;
+import com.abhiram.stocktrader.dto.PortfolioHoldingResponse;
 import com.abhiram.stocktrader.dto.SellStockRequest;
 import com.abhiram.stocktrader.entity.PortfolioHolding;
 import com.abhiram.stocktrader.entity.Transaction;
@@ -14,8 +15,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.abhiram.stocktrader.dto.PortfolioValueResponse;
-import com.abhiram.stocktrader.dto.DashboardResponse;
+import org.springframework.transaction.annotation.Transactional;
 
+//import com.abhiram.stocktrader.dto.DashboardResponse;
 @Service
 public class PortfolioService {
 
@@ -65,15 +67,32 @@ public class PortfolioService {
                                                                 .user(user)
                                                                 .symbol(request.getSymbol())
                                                                 .quantity(0)
-                                                                .averagePrice(currentPrice)
+                                                                .averagePrice(0.0)
                                                                 .build());
 
-                holding.setQuantity(
-                                holding.getQuantity()
-                                                + request.getQuantity());
+                int oldQuantity = holding.getQuantity();
+                double oldAveragePrice = holding.getAveragePrice();
+
+                int newQuantity = request.getQuantity();
+                double newPurchasePrice = currentPrice;
+
+                int totalQuantity = oldQuantity + newQuantity;
+
+                double newAveragePrice;
+
+                if (oldQuantity == 0) {
+                        newAveragePrice = newPurchasePrice;
+                } else {
+                        double combinedCost = (oldQuantity * oldAveragePrice)
+                                        + (newQuantity * newPurchasePrice);
+
+                        newAveragePrice = combinedCost / totalQuantity;
+                }
+
+                holding.setQuantity(totalQuantity);
+                holding.setAveragePrice(newAveragePrice);
 
                 holdingRepository.save(holding);
-
                 Transaction transaction = Transaction.builder()
                                 .user(user)
                                 .symbol(request.getSymbol())
@@ -86,12 +105,40 @@ public class PortfolioService {
                 transactionRepository.save(transaction);
         }
 
-        public List<PortfolioHolding> getPortfolio(String email) {
+        public List<PortfolioHoldingResponse> getPortfolio(String email) {
 
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-                return holdingRepository.findByUser(user);
+                List<PortfolioHolding> holdings = holdingRepository.findByUser(user);
+
+                return holdings.stream().map(holding -> {
+
+                        Double currentPrice = marketDataService.getCurrentPrice(
+                                        holding.getSymbol());
+
+                        Double currentValue = currentPrice * holding.getQuantity();
+
+                        Double gainLoss = (currentPrice - holding.getAveragePrice())
+                                        * holding.getQuantity();
+
+                        Double gainPercent = holding.getAveragePrice() == 0
+                                        ? 0.0
+                                        : ((currentPrice - holding.getAveragePrice())
+                                                        / holding.getAveragePrice()) * 100;
+
+                        return PortfolioHoldingResponse.builder()
+                                        .id(holding.getId())
+                                        .symbol(holding.getSymbol())
+                                        .quantity(holding.getQuantity())
+                                        .averagePrice(holding.getAveragePrice())
+                                        .currentPrice(currentPrice)
+                                        .currentValue(currentValue)
+                                        .gainLoss(gainLoss)
+                                        .gainPercent(gainPercent)
+                                        .build();
+
+                }).toList();
         }
 
         public List<Transaction> getTransactions(String email) {
@@ -102,44 +149,41 @@ public class PortfolioService {
                 return transactionRepository.findByUser(user);
         }
 
+        @Transactional
         public void sellStock(SellStockRequest request) {
 
-                User user = userRepository.findByEmail(
-                                request.getEmail())
+                User user = userRepository.findByEmail(request.getEmail())
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
                 PortfolioHolding holding = holdingRepository.findByUserAndSymbol(
                                 user,
                                 request.getSymbol())
-                                .orElseThrow(() -> new RuntimeException(
-                                                "Stock not owned"));
+                                .orElseThrow(() -> new RuntimeException("Stock not owned"));
 
                 if (holding.getQuantity() < request.getQuantity()) {
-
-                        throw new RuntimeException(
-                                        "Not enough shares");
+                        throw new RuntimeException("Not enough shares");
                 }
 
-                Double currentPrice = marketDataService.getCurrentPrice(
-                                request.getSymbol());
+                Double currentPrice = marketDataService.getCurrentPrice(request.getSymbol());
 
                 Double saleValue = currentPrice * request.getQuantity();
 
-                user.setCashBalance(
-                                user.getCashBalance() + saleValue);
-
+                // Credit user's cash balance
+                user.setCashBalance(user.getCashBalance() + saleValue);
                 userRepository.save(user);
 
-                holding.setQuantity(
-                                holding.getQuantity()
-                                                - request.getQuantity());
+                // Reduce the holding quantity
+                int remainingQuantity = holding.getQuantity() - request.getQuantity();
 
-                if (holding.getQuantity() == 0) {
+                if (remainingQuantity == 0) {
                         holdingRepository.delete(holding);
                 } else {
+                        holding.setQuantity(remainingQuantity);
+                        // Do NOT update averagePrice when selling
                         holdingRepository.save(holding);
                 }
 
+                // Record the transaction
                 Transaction transaction = Transaction.builder()
                                 .user(user)
                                 .symbol(request.getSymbol())

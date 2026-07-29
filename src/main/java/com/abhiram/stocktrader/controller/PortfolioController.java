@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import com.abhiram.stocktrader.dto.DashboardResponse;
+import com.abhiram.stocktrader.dto.PortfolioHoldingResponse;
 
 @RestController
 @RequestMapping("/portfolio")
@@ -39,7 +40,7 @@ public class PortfolioController {
      * View current portfolio holdings.
      */
     @GetMapping("/{email}")
-    public List<PortfolioHolding> getPortfolio(
+    public List<PortfolioHoldingResponse> getPortfolio(
             @PathVariable String email) {
 
         return portfolioService.getPortfolio(email);

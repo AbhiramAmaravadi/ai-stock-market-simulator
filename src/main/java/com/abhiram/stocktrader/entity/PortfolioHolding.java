@@ -29,4 +29,5 @@ public class PortfolioHolding {
     @ManyToOne
     @JsonIgnore
     private User user;
+
 }
