@@ -105,28 +105,59 @@ public class PortfolioService {
                 transactionRepository.save(transaction);
         }
 
-        public List<PortfolioHoldingResponse> getPortfolio(String email) {
+        /**
+         * Returns the raw portfolio holdings stored in the database.
+         *
+         * This method is intended for internal backend services
+         * (analytics, risk calculations, dashboard, etc.)
+         * that operate on persistent entities.
+         */
+        public List<PortfolioHolding> getHoldings(String email) {
 
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-                List<PortfolioHolding> holdings = holdingRepository.findByUser(user);
+                return holdingRepository.findByUser(user);
+        }
 
+        /**
+         * Retrieves the user's portfolio along with live market information.
+         *
+         * For each holding, we fetch the current stock price and calculate:
+         * - Current market value
+         * - Unrealized profit/loss
+         * - Unrealized profit/loss percentage
+         *
+         * These values are computed dynamically instead of being stored in the
+         * database because stock prices change continuously.
+         */
+        public List<PortfolioHoldingResponse> getPortfolio(String email) {
+
+                // Find the user
+                User user = userRepository.findByEmail(email)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+                // Reuse the internal holdings method
+                List<PortfolioHolding> holdings = getHoldings(email);
+
+                // Convert database entities into response DTOs
                 return holdings.stream().map(holding -> {
 
-                        Double currentPrice = marketDataService.getCurrentPrice(
-                                        holding.getSymbol());
+                        // Fetch the latest market price
+                        Double currentPrice = marketDataService.getCurrentPrice(holding.getSymbol());
 
+                        // Calculate the current value of the investment
                         Double currentValue = currentPrice * holding.getQuantity();
 
-                        Double gainLoss = (currentPrice - holding.getAveragePrice())
-                                        * holding.getQuantity();
+                        // Calculate unrealized profit/loss
+                        Double gainLoss = (currentPrice - holding.getAveragePrice()) * holding.getQuantity();
 
+                        // Calculate percentage gain/loss
                         Double gainPercent = holding.getAveragePrice() == 0
                                         ? 0.0
                                         : ((currentPrice - holding.getAveragePrice())
                                                         / holding.getAveragePrice()) * 100;
 
+                        // Build the response object sent to the frontend
                         return PortfolioHoldingResponse.builder()
                                         .id(holding.getId())
                                         .symbol(holding.getSymbol())
@@ -230,8 +261,8 @@ public class PortfolioService {
                 User user = userRepository.findByEmail(email)
                                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-                List<PortfolioHolding> holdings = holdingRepository.findByUser(user);
-
+                // Fetch the user's holdings
+                List<PortfolioHolding> holdings = getHoldings(email);
                 List<Transaction> transactions = transactionRepository.findByUser(user);
 
                 double portfolioValue = 0.0;

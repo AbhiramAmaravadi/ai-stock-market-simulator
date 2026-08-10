@@ -3,7 +3,6 @@ package com.abhiram.stocktrader.controller;
 import com.abhiram.stocktrader.dto.BuyStockRequest;
 import com.abhiram.stocktrader.dto.PortfolioValueResponse;
 import com.abhiram.stocktrader.dto.SellStockRequest;
-import com.abhiram.stocktrader.entity.PortfolioHolding;
 import com.abhiram.stocktrader.entity.Transaction;
 import com.abhiram.stocktrader.service.PortfolioService;
 import org.springframework.web.bind.annotation.*;
