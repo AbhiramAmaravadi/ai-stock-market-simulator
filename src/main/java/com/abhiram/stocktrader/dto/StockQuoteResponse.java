@@ -9,4 +9,7 @@ public class StockQuoteResponse {
     private Double h; // high
     private Double l; // low
     private Double o; // open
+    private Double pc; // previous close
+    private Double d; // change
+    private Double dp; // change percent
 }

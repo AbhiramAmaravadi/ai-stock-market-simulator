@@ -13,16 +13,21 @@ public class MarketDataService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public Double getCurrentPrice(String symbol) {
+    public StockQuoteResponse getQuote(String symbol) {
 
         String url = "https://finnhub.io/api/v1/quote?symbol="
                 + symbol
                 + "&token="
                 + apiKey;
 
-        StockQuoteResponse response = restTemplate.getForObject(
+        return restTemplate.getForObject(
                 url,
                 StockQuoteResponse.class);
+    }
+
+    public Double getCurrentPrice(String symbol) {
+
+        StockQuoteResponse response = getQuote(symbol);
 
         return response.getC();
     }

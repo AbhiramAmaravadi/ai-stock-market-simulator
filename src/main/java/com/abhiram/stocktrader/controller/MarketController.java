@@ -1,5 +1,6 @@
 package com.abhiram.stocktrader.controller;
 
+import com.abhiram.stocktrader.dto.StockQuoteResponse;
 import com.abhiram.stocktrader.service.MarketDataService;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,11 +22,16 @@ public class MarketController {
     public Map<String, Object> getPrice(
             @PathVariable String symbol) {
 
-        Double price = marketDataService
-                .getCurrentPrice(symbol);
+        StockQuoteResponse quote = marketDataService.getQuote(symbol);
 
         return Map.of(
                 "symbol", symbol,
-                "price", price);
+                "price", quote.getC(),
+                "high", quote.getH(),
+                "low", quote.getL(),
+                "open", quote.getO(),
+                "previousClose", quote.getPc(),
+                "change", quote.getD(),
+                "changePercent", quote.getDp());
     }
 }
