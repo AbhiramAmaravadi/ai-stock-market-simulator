@@ -1,35 +1,73 @@
 package com.abhiram.stocktrader.service;
 
-import com.abhiram.stocktrader.dto.OllamaRequest;
-import com.abhiram.stocktrader.dto.OllamaResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+import java.util.Map;
+
 /**
- * Service for communicating with Ollama.
+ * Service for communicating with Llama through Groq.
  */
 @Service
 public class OllamaService {
 
-    private static final String OLLAMA_URL = "http://localhost:11434/api/generate";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+    private static final String MODEL = "llama-3.1-8b-instant";
+
+    @Value("${groq.api.key}")
+    private String apiKey;
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     /**
-     * Sends prompt to Llama model.
+     * Sends prompt to Llama through Groq.
      */
     public String generate(String prompt) {
 
-        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
 
-        OllamaRequest request = new OllamaRequest(
-                "llama3.2",
-                prompt,
-                false);
+        Map<String, Object> message = Map.of(
+                "role", "user",
+                "content", prompt);
 
-        OllamaResponse response = restTemplate.postForObject(
-                OLLAMA_URL,
+        Map<String, Object> requestBody = Map.of(
+                "model", MODEL,
+                "messages", List.of(message),
+                "temperature", 0.7);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<Map> response = restTemplate.exchange(
+                GROQ_URL,
+                HttpMethod.POST,
                 request,
-                OllamaResponse.class);
+                Map.class);
 
-        return response.getResponse();
+        Map body = response.getBody();
+
+        if (body == null || body.get("choices") == null) {
+            throw new RuntimeException("Invalid response from Groq");
+        }
+
+        List choices = (List) body.get("choices");
+
+        if (choices.isEmpty()) {
+            throw new RuntimeException("Groq returned no choices");
+        }
+
+        Map choice = (Map) choices.get(0);
+        Map messageResponse = (Map) choice.get("message");
+
+        return (String) messageResponse.get("content");
     }
 }
