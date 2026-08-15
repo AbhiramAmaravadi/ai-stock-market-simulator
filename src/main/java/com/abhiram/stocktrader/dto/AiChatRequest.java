@@ -16,5 +16,5 @@ public class AiChatRequest {
     /**
      * User's investment question.
      */
-    private String question;
+    private String message;
 }

@@ -1,8 +1,11 @@
 package com.abhiram.stocktrader.controller;
 
 import com.abhiram.stocktrader.dto.AiAnalysisResponse;
+import com.abhiram.stocktrader.dto.AiChatRequest;
+import com.abhiram.stocktrader.dto.AiChatResponse;
 import com.abhiram.stocktrader.dto.DashboardResponse;
 import com.abhiram.stocktrader.service.AiAdvisorService;
+import com.abhiram.stocktrader.service.OllamaService;
 import com.abhiram.stocktrader.service.PortfolioService;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,13 +18,16 @@ public class AiController {
 
     private final PortfolioService portfolioService;
     private final AiAdvisorService aiAdvisorService;
+    private final OllamaService ollamaService;
 
     public AiController(
             PortfolioService portfolioService,
-            AiAdvisorService aiAdvisorService) {
+            AiAdvisorService aiAdvisorService,
+            OllamaService ollamaService) {
 
         this.portfolioService = portfolioService;
         this.aiAdvisorService = aiAdvisorService;
+        this.ollamaService = ollamaService;
     }
 
     /**
@@ -33,10 +39,40 @@ public class AiController {
 
         DashboardResponse dashboard = portfolioService.getDashboard(email);
 
-        String analysis = aiAdvisorService.analyzePortfolio(
-                dashboard);
+        String analysis = aiAdvisorService.analyzePortfolio(dashboard);
 
-        return new AiAnalysisResponse(
-                analysis);
+        return new AiAnalysisResponse(analysis);
+    }
+
+    /**
+     * Answer an investment question using Llama.
+     */
+    @PostMapping("/chat")
+    public AiChatResponse chat(
+            @RequestBody AiChatRequest request) {
+
+        String prompt = """
+                You are an AI investment assistant for a stock market simulator.
+
+                User email:
+                %s
+
+                User's investment question:
+                %s
+
+                Provide a clear, helpful answer.
+                Explain your reasoning briefly.
+                Do not claim to know the user's personal financial
+                circumstances beyond the information provided.
+                This is educational information, not personalized
+                financial advice.
+                """
+                .formatted(
+                        request.getEmail(),
+                        request.getMessage());
+
+        String response = ollamaService.generate(prompt);
+
+        return new AiChatResponse(response);
     }
 }
