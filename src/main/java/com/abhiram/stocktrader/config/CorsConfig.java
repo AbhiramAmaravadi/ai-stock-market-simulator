@@ -21,7 +21,7 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:8081");
 
         // Production frontend
-        config.addAllowedOrigin("https://lovable-insights-omega.vercel.app");
+        config.addAllowedOrigin("https://ursfiniq.vercel.app");
 
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
